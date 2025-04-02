@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+
+<!--
+ Use OpenGL and GLUT to draw a simple cube
+  with each face being a different color.  Rotations
+  can be applied with the arrow keys, the page up
+  key, and the page down key.  The home key will set
+  all rotations to 0.  Initial rotations about the
+  x, y, and z axes are 15, -15, and 0.  
+
+  This program is meant as an example of using modeling
+  transforms, with glPushMatrix and glPopMatrix.
+ 
+  Note that this program does not use lighting.
+-->
+
+<head>
+<meta charset="UTF-8">
+<title>Korkociąg</title>
+
+<script src="glsim.js"></script>  <!-- load the OpenGL 1.1 simulation code -->
+
+<script>
+    let rotateX = 15;   // Rotacje obiektu
+    let rotateY = -15;
+    let rotateZ = 0;
+    let objectNumber = 0; // Zmienna globalna określająca obiekt (0 - nic, 1 - korkociąg, 2 - piramida)
+	
+	function corkscrew() {
+		const N = 4;
+		const segments = 100;
+		const scaleFactor = 0.05;
+		
+		const colors = [
+			[0.6, 0.3, 0.1],    // brązowy
+			[0.0, 0.0, 1.0],   // niebieski
+			[0.0, 1.0, 0.0]   // zielony
+		];
+		
+		glBegin(GL_LINE_STRIP);
+		
+		for (let i = 0; i <= N * segments; i++) {
+			let progress = i / (N * segments);
+			
+			let color;
+			if (progress < 0.5) {
+				let mix = progress * 2;
+				color = [
+					colors[0][0] * (1 - mix) + colors[1][0] * mix,
+					colors[0][1] * (1 - mix) + colors[1][1] * mix,
+					colors[0][2] * (1 - mix) + colors[1][2] * mix
+				];
+			} else {
+				let mix = (progress - 0.5) * 2;
+				color = [
+					colors[1][0] * (1 - mix) + colors[2][0] * mix,
+					colors[1][1] * (1 - mix) + colors[2][1] * mix,
+					colors[1][2] * (1 - mix) + colors[2][2] * mix
+				];
+			}
+			
+			glColor3f(color[0], color[1], color[2]);
+			
+			let t = i * 2 * Math.PI / segments;
+			let radius = scaleFactor * (i / segments);
+			let x = radius * Math.cos(t);
+			let y = radius * Math.sin(t);
+			let z = progress * 2 - 1;
+			
+			glVertex3f(x, y, z);
+		}
+		
+		glEnd();
+	}
+	
+	function triangle() {
+		glBegin(GL_TRIANGLES);
+		glVertex3f(0.0, 0.0, 0.0);
+		glVertex3f(1.0, 0.0, 0.0);
+		glVertex3f(0.5, 0.0, Math.sqrt(3)/2);
+		glEnd();
+	}
+
+	function pyramid() {
+		const N = 8; // Liczba wierzchołków podstawy
+		const size = 1.0;
+		const height = 0.8;
+
+		// podstawa
+		glColor3f(0.8, 0.2, 0.2);
+		glBegin(GL_TRIANGLE_FAN);
+		glVertex3f(0, 0, 0);
+		for (let i = 0; i <= N; i++) {
+			let angle = (i * 2 * Math.PI) / N;
+			let x = (size / 2) * Math.cos(angle);
+			let z = (size / 2) * Math.sin(angle);
+			glVertex3f(x, 0, z);
+		}
+		glEnd();
+
+		// sciany
+		glColor3f(0.2, 0.8, 0.2);
+		glBegin(GL_TRIANGLE_FAN);
+		glVertex3f(0, height, 0);
+		for (let i = 0; i <= N; i++) {
+			let angle = (i * 2 * Math.PI) / N;
+			let x = (size / 2) * Math.cos(angle);
+			let z = (size / 2) * Math.sin(angle);
+			glVertex3f(x, 0, z);
+		}
+		glEnd();
+	}
+	
+	function display() {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				
+		glLoadIdentity();            
+		glRotatef(rotateZ, 0, 0, 1);
+		glRotatef(rotateY, 0, 1, 0);
+		glRotatef(rotateX, 1, 0, 0);
+		
+		if (objectNumber === 1) {
+			corkscrew();
+		} else if (objectNumber === 2) {
+			pyramid();
+		}
+	}
+    
+    function initGL() {
+        glMatrixMode(GL_PROJECTION);
+        glOrtho(-1, 1, -1, 1, -1, 1); // Mniejszy obszar widoczności dla lepszego dopasowania
+        glMatrixMode(GL_MODELVIEW);
+        glEnable(GL_DEPTH_TEST);
+        glClearColor(0, 0, 0, 1);
+    }
+    
+    function doKeyDown(evt) {
+        let key = evt.keyCode;
+        
+        // Obsługa klawisza numerycznego 1 i 2
+        if (key === 49) { // 1 - korkociąg
+        objectNumber = 1;
+		} 
+		else if (key === 50) { // 2 - piramida
+			objectNumber = 2;
+		}
+        
+        // Rotacje
+        if (key === 37) // lewo
+           rotateY -= 15;
+        else if (key === 39) // prawo
+           rotateY += 15;
+        else if (key === 40) // dół
+           rotateX += 15;
+        else if (key === 38) // góra
+           rotateX -= 15;
+        else if (key === 33) // page up
+           rotateZ += 15;
+        else if (key === 34) // page down
+           rotateZ -= 15;
+        else if (key === 36) // home
+           rotateX = rotateY = rotateZ = 0;
+           
+        if (key >= 33 && key <= 40) {
+            evt.preventDefault();
+        }
+        display();
+    }
+    
+    function init() {
+        try {
+            glsimUse("glcanvas");
+        }
+        catch (e) {
+            document.getElementById("canvas-holder").innerHTML =
+                "Sorry, an error occurred:<br>" + e;
+            return;
+        }
+        document.onkeydown = doKeyDown;
+        initGL();
+        display();
+    }
+</script>
+</head>
+
+<body onload="init()">
+
+<h3>OpenGL - Lab. 5</h3>
+
+<p>Korkociąg - 1, Piramida - 2</p>
+
+<noscript>
+<p><b>Sorry, this page requires JavaScript!</b></p>
+</noscript>
+
+<div id="canvas-holder">
+<canvas id="glcanvas" width="500" height="500"></canvas>
+</div>
+
+</body>
+</html>
