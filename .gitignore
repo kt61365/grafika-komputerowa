@@ -1,0 +1,8 @@
+*.docx
+*.pdf
+*.doc
+.vs
+bin/
+obj/
+debug/
+/build/
